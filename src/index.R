@@ -20,6 +20,10 @@ source("./data_import.R")
 
 source("./attitudinal.R")
 
+source("./mwu_attitudinal.R")
+
 source("./lr_data_create.R")
 source("./lr_attitudinal.R")
 source("./lr_remote.R")
+
+source("./stat.R")

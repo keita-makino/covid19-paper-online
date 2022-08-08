@@ -1,6 +1,8 @@
 do_lr_remote <- function(target) {
   column <- paste0("work_status_", target)
-  lr_data_temp <- lr_data %>%
+  column_employment <- paste0("c02_work_full_", target, "_dv")
+  lr_data_temp <- lr_data_remote %>%
+    filter(!!sym(column_employment) == 1) %>%
     filter(!!sym(column) != "Non-worker") %>%
     mutate(
       !!sym(column) := factor(
@@ -29,10 +31,11 @@ do_lr_remote <- function(target) {
         "b06_age_driver_license +",
         "b07_educational_background +",
         "b08_hh_income +",
+        "d03_neighborhood_type +",
         "source"
       ) %>%
         as.formula(),
-      lr_data_temp,
+      get("lr_data_temp", envir = globalenv()),
       Hess = T,
       trace = 0
     )
@@ -45,8 +48,61 @@ do_lr_remote <- function(target) {
 
   stepped <- step(
     get("model_lr", envir = globalenv()),
-    direction = "backward"
+    direction = "backward",
+    trace = 0
   )
+
+  null <- multinom(
+    paste0(
+      column,
+      " ~ ",
+      "1"
+    ) %>%
+      as.formula(),
+    get("lr_data_temp", envir = globalenv()),
+    Hess = T,
+    trace = 0
+  )
+
+  summary(stepped) %>% print()
+
+  dim(lr_data_temp) %>%
+    .[1] %>%
+    print()
+
+  lr_data_temp$source %>%
+    table() %>%
+    print()
+
+  null %>%
+    logLik() %>%
+    print()
+
+  stepped %>%
+    logLik() %>%
+    print()
+
+
+
+  (
+    1 -
+      stepped %>% logLik() /
+      null %>% logLik()
+  ) %>%
+    round(3) %>%
+    format(nsmall = 3) %>%
+    print()
+  (
+    1 -
+      (stepped %>% logLik() - stepped$edf + null$edf - 1) /
+        null %>% logLik()
+  ) %>%
+    round(3) %>%
+    format(nsmall = 3) %>%
+    print()
+
+
+
   z <- summary(stepped)$coefficients /
     summary(stepped)$standard.errors
   p <- ((1 - pnorm(abs(z), 0, 1)) * 2) %>%
@@ -66,6 +122,9 @@ do_lr_remote <- function(target) {
     } else {
       coef[i, 1] <- paste0(" ", coef[i, 1])
     }
+    if (p[i, 1] < 0.10 & p[i, 1] >= 0.05) {
+      coef[i, 1] <- paste0("/", coef[i, 1])
+    }
     if (p[i, 1] < 0.05 & p[i, 1] >= 0.01) {
       coef[i, 1] <- paste0("*", coef[i, 1])
     }
@@ -76,6 +135,9 @@ do_lr_remote <- function(target) {
       coef[i, 2] <- paste0("  ", coef[i, 2])
     } else {
       coef[i, 2] <- paste0(" ", coef[i, 2])
+    }
+    if (p[i, 2] < 0.10 & p[i, 2] >= 0.05) {
+      coef[i, 2] <- paste0("/", coef[i, 2])
     }
     if (p[i, 2] < 0.05 & p[i, 2] >= 0.01) {
       coef[i, 2] <- paste0("*", coef[i, 2])
@@ -94,3 +156,22 @@ do_lr_remote <- function(target) {
 do_lr_remote("precovid")
 do_lr_remote("2021")
 do_lr_remote("2022")
+
+
+read.csv(file.path("..", "dist", "lr", "precovid.csv")) %>%
+  tibble() %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "2021.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "2022.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  write.csv(
+    file.path("..", "dist", "lr", "remote.csv"),
+    row.names = F,
+    quote = F
+  )

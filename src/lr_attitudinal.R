@@ -5,6 +5,9 @@ attach_significance <- function(coef, p) {
     } else {
       coef[i] <- paste0(" ", coef[i])
     }
+    if (p[i] < 0.10 & p[i] >= 0.05) {
+      coef[i] <- paste0("/", coef[i])
+    }
     if (p[i] < 0.05 & p[i] >= 0.01) {
       coef[i] <- paste0("*", coef[i])
     }
@@ -29,13 +32,16 @@ do_lr_attitudinal <- function(target) {
       "source"
     ) %>%
       as.formula(),
-    data = lr_data
+    data = lr_data_attitudinal
   )
+
   vif(model_lr) %>% print()
   stepped <- step(
     model_lr, model_lr %>% formula(),
-    direction = "backward"
+    direction = "backward",
+    trace = 0
   )
+
   coef <- attach_significance(
     stepped %>%
       summary() %>%
@@ -49,6 +55,20 @@ do_lr_attitudinal <- function(target) {
       .[, 4]
   ) %>%
     as.data.frame()
+
+  lr_data_attitudinal$source %>%
+    table() %>%
+    print()
+
+  summary(stepped)$r.squared %>%
+    round(3) %>%
+    format(nsmall = 3) %>%
+    print()
+  summary(stepped)$adj.r.squared %>%
+    round(3) %>%
+    format(nsmall = 3) %>%
+    print()
+
   write.csv(
     coef,
     file.path("..", "dist", "lr", paste0(target, ".csv")),
@@ -56,9 +76,42 @@ do_lr_attitudinal <- function(target) {
   )
 }
 
-do_lr_attitudinal("MR1")
-do_lr_attitudinal("MR2")
-do_lr_attitudinal("MR5")
-do_lr_attitudinal("MR3")
-do_lr_attitudinal("MR4")
-do_lr_attitudinal("MR6")
+do_lr_attitudinal("PA1")
+do_lr_attitudinal("PA4")
+do_lr_attitudinal("PA2")
+do_lr_attitudinal("PA6")
+do_lr_attitudinal("PA3")
+do_lr_attitudinal("PA5")
+
+read.csv(file.path("..", "dist", "lr", "PA1.csv")) %>%
+  tibble() %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "PA4.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "PA2.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "PA6.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "PA3.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  full_join(
+    read.csv(file.path("..", "dist", "lr", "PA5.csv")) %>%
+      tibble(),
+    by = "X"
+  ) %>%
+  write.csv(
+    file.path("..", "dist", "lr", "attitudinal.csv"),
+    row.names = F,
+    quote = F
+  )

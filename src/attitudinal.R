@@ -34,23 +34,49 @@ get_factor <- function(name, n) {
     envir = globalenv()
   ) %>%
     select(all_of(attitudinal_tag_list_long))
+  is_done <- F
+  rows <- 1:27
 
-  factor <- psych::fa(
-    data,
-    nfactors = n, scores = "Bartlett", rotate = "promax"
-  )
+  while (!is_done) {
+    data <- data[rows]
+    factor <- psych::fa(
+      data,
+      nfactors = n,
+      rotate = "promax",
+      scores = "tenBerge",
+      max.iter = 2000,
+      SMC = TRUE,
+      warnings = TRUE,
+      fm = "pa"
+    )
 
-  print(
-    factor$Vaccounted %>%
-      round(3) %>%
-      .[1, ]
-  )
+    print(
+      factor$Vaccounted %>%
+        round(3) %>%
+        .[1, ]
+    )
 
-  factor_score <- data.frame(
-    psych::factor.scores(
-      data, factor
-    )$scores
-  )
+    factor_score <- data.frame(
+      psych::factor.scores(
+        data, factor
+      )$scores
+    )
+
+    check_significance <- factor$loadings[] %>%
+      tibble() %>%
+      rowwise() %>%
+      summarize(
+        n = any(abs(.) > 0.3)
+      ) %>%
+      deframe()
+
+
+    if (all(check_significance)) {
+      is_done <- T
+    }
+
+    rows <- check_significance %>% which()
+  }
 
   ggplot(
     data.frame(
@@ -96,15 +122,3 @@ get_factor <- function(name, n) {
 n <- 6
 al_attitudinal <- "al" %>% get_attitudinal()
 get_factor("al_attitudinal", n)
-
-assign(
-  paste0("al_score_", n),
-  get(paste0("al_attitudinal_factor_", n))$scores %>%
-    as.data.frame() %>%
-    tibble() %>%
-    mutate(source = al %>%
-      filter(if_all(starts_with("a"), ~ !is.na(.))) %>%
-      filter(if_all(starts_with("a"), ~ . > 0)) %>%
-      .$source),
-  envir = globalenv()
-)

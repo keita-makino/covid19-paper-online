@@ -1,19 +1,32 @@
+al_attitudinal_mwu <-
+  al_attitudinal_factor_6$scores %>%
+  as.data.frame() %>%
+  tibble() %>%
+  mutate(
+    source = al_attitudinal$source
+  )
+
 for (i in 1:n) {
   pairwise.wilcox.test(
-    get(paste0("al_score_", n))[, i] %>%
+    al_attitudinal_mwu[, i] %>%
       deframe(),
-    get(paste0("al_score_", n))[, n + 1] %>%
+    al_attitudinal_mwu[, n + 1] %>%
       deframe(),
-    alternative = "l"
+    alternative = "l",
+    p.adjust.method = "BH"
   ) %>%
     print()
   pairwise.wilcox.test(
-    get(paste0("al_score_", n))[, i] %>%
+    al_attitudinal_mwu[, i] %>%
       deframe(),
-    get(paste0("al_score_", n))[, n + 1] %>%
+    al_attitudinal_mwu[, n + 1] %>%
       deframe(),
-    alternative = "g"
+    alternative = "g",
+    p.adjust.method = "BH"
   ) %>%
     print()
   print("--------------------------------------------")
 }
+
+al_attitudinal_mwu$source %>%
+  table() 
