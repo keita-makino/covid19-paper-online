@@ -1,33 +1,3 @@
-get_attitudinal <- function(name) {
-  data <- get(
-    name,
-    envir = globalenv()
-  )
-  return(
-    data %>%
-      select(
-        attitudinal_tag_list_long[1:27], source
-      ) %>%
-      filter(if_all(starts_with("a"), ~ !is.na(.))) %>%
-      filter(if_all(starts_with("a"), ~ . > 0)) %>%
-      mutate_at(vars(
-        "a1o_rightofway_cars",
-        "a1p_prefer_being_driver",
-        "a1q_no_alternative_to_driving",
-        "a1r_like_idea_pt_as_transportation",
-        "a1s_like_latest_technology"
-      ), ~ {
-        case_when(
-          . == 1 ~ 1,
-          . == 2 ~ 2,
-          . == 6 ~ 3,
-          . == 7 ~ 4,
-          . == 8 ~ 5
-        )
-      })
-  )
-}
-
 get_factor <- function(name, n) {
   data <- get(
     name,
@@ -97,7 +67,7 @@ get_factor <- function(name, n) {
     theme_bw()
 
   ggsave(
-    paste0("../dist/scree_", name, "_", n, ".png"),
+    paste0("../output/scree_", name, "_", n, ".png"),
     width = 10, height = 5, unit = "in"
   )
 
@@ -106,7 +76,7 @@ get_factor <- function(name, n) {
   )
   write.csv(
     factor$loadings[],
-    paste0("../dist/factor_", name, "_", n, ".csv")
+    paste0("../output/factor_", name, "_", n, ".csv")
   )
 
   assign(
@@ -120,5 +90,4 @@ get_factor <- function(name, n) {
 }
 
 n <- 6
-al_attitudinal <- "al" %>% get_attitudinal()
 get_factor("al_attitudinal", n)

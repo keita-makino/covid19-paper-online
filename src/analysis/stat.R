@@ -1,5 +1,3 @@
-
-
 test_socio <- function(target, title) {
   data <- al %>%
     factorize_socio() %>%
@@ -8,7 +6,9 @@ test_socio <- function(target, title) {
     filter(!is.na(value)) %>%
     filter(value != -99999) %>%
     mutate(
-      value = value %>% as_factor()
+      value = value %>% as_factor(),
+      source = source %>%
+        factor(levels = c("lg", "op", "cs", "mm", "mo"))
     ) %>%
     group_by(value, source)
 
@@ -38,6 +38,13 @@ test_socio <- function(target, title) {
       labels =
         c(
           paste0(
+            "Longitudinal: N=",
+            data %>%
+              filter(source == "lg") %>%
+              dim() %>%
+              .[1]
+          ),
+          paste0(
             "Opinion panel: N=",
             data %>%
               filter(source == "op") %>%
@@ -45,9 +52,9 @@ test_socio <- function(target, title) {
               .[1]
           ),
           paste0(
-            "Longitudinal: N=",
+            "Convenience sampling: N=",
             data %>%
-              filter(source == "lg") %>%
+              filter(source == "cs") %>%
               dim() %>%
               .[1]
           ),
@@ -70,6 +77,10 @@ test_socio <- function(target, title) {
     theme_bw() +
     theme(
       legend.position = "bottom",
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 8),
+      legend.key.size = unit(0.5, "lines"),
+      legend.margin = margin(-6, 0, 0, 0),
     ) +
     guides(
       fill = guide_legend(
@@ -81,9 +92,9 @@ test_socio <- function(target, title) {
       title
     )
   ggsave(
-    paste0("../dist/test/", target, ".png"),
+    paste0("../output/test/", target, ".png"),
     width = 6,
-    height = 4,
+    height = 3.6,
     units = "in"
   )
 }

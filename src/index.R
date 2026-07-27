@@ -12,18 +12,26 @@ library(tidygraph)
 library(sampling)
 library(car)
 library(nnet)
+library(anomaly)
+library(ggtext)
 
 setwd("./src")
 
-source("./columns.R")
-source("./data_import.R")
+dir.create(file.path("..", "output", "lr"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("..", "output", "test"), recursive = TRUE, showWarnings = FALSE)
 
-source("./attitudinal.R")
+source("./preparation/columns.R")
+source("./preparation/data_import.R")
+source("./preparation/export_cs.R")
+source("./preparation/attitudinal_data.R")
 
-source("./mwu_attitudinal.R")
+source("./analysis/attitudinal.R")
 
-source("./lr_data_create.R")
-source("./lr_attitudinal.R")
-source("./lr_remote.R")
+source("./analysis/mwu_attitudinal.R")
 
-source("./stat.R")
+source("./preparation/lr_data_create.R")
+source("./analysis/lr_attitudinal.R")
+source("./analysis/lr_remote.R")
+
+source("./analysis/stat.R")
+source("./analysis/attitudinal_distribution.R")

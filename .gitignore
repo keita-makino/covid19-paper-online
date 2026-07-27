@@ -1,11 +1,10 @@
 .Rhistory
 .RData
-renv
-renv.lock
+renv/library
+renv/local
+renv/cellar
+AGENTS.md
 
-analysis
-document
-
-dist
+/output/
 src/test_code
 src/data

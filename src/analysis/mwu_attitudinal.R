@@ -4,6 +4,12 @@ al_attitudinal_mwu <-
   tibble() %>%
   mutate(
     source = al_attitudinal$source
+  ) %>%
+  mutate(
+    source = factor(
+      source,
+      levels = c("op", "lg", "cs", "mm", "mo")
+    )
   )
 
 for (i in 1:n) {
@@ -29,4 +35,4 @@ for (i in 1:n) {
 }
 
 al_attitudinal_mwu$source %>%
-  table() 
+  table()
