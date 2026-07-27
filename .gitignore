@@ -1,5 +1,6 @@
 .Rhistory
 .RData
+.vscode/
 renv/library
 renv/local
 renv/cellar
