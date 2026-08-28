@@ -10,13 +10,24 @@ Run all commands from the repository root.
 
 ### 1. Prepare the input data
 
-Obtain the following files through the approved access process and place them in `src/data/`:
+Obtain the following files through the approved access process:
 
-- `src/data/mm.sav`
-- `src/data/altogether_cleaned.sav`
-- `src/data/cs.sav`
+- `mm.sav` (mail-out / mail-back survey)
+- `altogether_cleaned.rds` (2021 online survey)
 
-The `src/data/` directory is excluded from Git. Do not commit raw data.
+Create a `.env` file at the repository root (see `.env.example`) pointing at the
+two analysis inputs:
+
+```sh
+DATA_2021_PATH=/path/to/altogether_cleaned.rds
+DATA_MM_PATH=/path/to/mm.sav
+```
+
+Relative paths are resolved against the directory containing the `.env` file.
+`src/preparation/export_cs.R` is not run by the entry point. If it is run manually,
+it expects `cs.sav` in `src/data/`.
+
+The `.env` file and the `src/data/` directory are excluded from Git. Do not commit raw data.
 
 ### 2. Restore the packages
 
@@ -42,7 +53,7 @@ Rscript --vanilla -e "renv::load(); source('src/index.R')"
 
 ## Outputs
 
-All generated files are written under `output/`. Regression outputs are stored in `output/lr/`, and statistical test plots are stored in `output/test/`. The `output/` directory is not tracked in Git.
+All generated files are written under `output/`. Numeric tables are written as tidy CSV files with matching programmatically generated LaTeX fragments. Regression outputs are stored in `output/lr/`, and statistical test plots are stored in `output/test/`. The `output/` directory is not tracked in Git.
 
 ## Project structure
 

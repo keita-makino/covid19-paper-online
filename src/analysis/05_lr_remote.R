@@ -3,7 +3,21 @@ do_lr_remote <- function(target) {
   column_employment <- paste0("c02_work_full_", target, "_dv")
   lr_data_temp <- lr_data_remote %>%
     filter(!!sym(column_employment) == 1) %>%
+    phase0_track(
+      paste0("lr_remote_", target, "_filter_full_time"),
+      "lr_data_remote"
+    ) %>%
     filter(!!sym(column) != "Non-worker") %>%
+    phase0_track(
+      paste0("lr_remote_", target, "_filter_non_worker"),
+      "lr_data_remote"
+    ) %>%
+    # Exclude only source labels that were not mapped during data import.
+    filter(!is.na(source)) %>%
+    phase0_track(
+      paste0("lr_remote_", target, "_filter_missing_source"),
+      "lr_data_remote"
+    ) %>%
     mutate(
       !!sym(column) := factor(
         !!sym(column),
@@ -13,6 +27,10 @@ do_lr_remote <- function(target) {
           "Teleworker"
         )
       )
+    ) %>%
+    phase0_track(
+      paste0("lr_remote_", target, "_factor_outcome"),
+      "lr_data_remote"
     )
 
   assign(
@@ -46,10 +64,28 @@ do_lr_remote <- function(target) {
     envir = globalenv()
   )
 
+  # Enforce retention of the channel dummy: the lower scope keeps `source`
+  # in every candidate model, so backward selection cannot drop it.
   stepped <- step(
     get("model_lr", envir = globalenv()),
+    scope = list(
+      lower = ~ source,
+      upper = get("model_lr", envir = globalenv()) %>% formula()
+    ),
     direction = "backward",
     trace = 0
+  )
+
+  phase0_assert_source_retained(
+    stepped,
+    paste0("lr_remote_", target),
+    "multinom"
+  )
+  phase0_assert_source_level_retained(
+    stepped,
+    lr_data_temp,
+    paste0("lr_remote_", target),
+    "multinom"
   )
 
   null <- multinom(
@@ -62,6 +98,20 @@ do_lr_remote <- function(target) {
     get("lr_data_temp", envir = globalenv()),
     Hess = T,
     trace = 0
+  )
+
+  model_tidy <- phase0_tidy_multinom(
+    stepped,
+    target,
+    null
+  )
+  phase0_append_model_tidy(model_tidy)
+
+  phase0_write_csv(
+    model_tidy,
+    phase0_output_path("lr", paste0(target, "_multinom_tidy.csv")),
+    "lr_remote",
+    "Tidy multinomial logit coefficients after backward stepwise selection."
   )
 
   summary(stepped) %>% print()
@@ -103,128 +153,40 @@ do_lr_remote <- function(target) {
 
 
 
-  z <- summary(stepped)$coefficients /
-    summary(stepped)$standard.errors
-  p <- ((1 - pnorm(abs(z), 0, 1)) * 2) %>%
-    as.data.frame() %>%
-    round(3) %>%
-    format(nsmall = 3) %>%
-    t()
-  coef <- stepped %>%
-    coef() %>%
-    as.data.frame() %>%
-    round(3) %>%
-    format(nsmall = 3) %>%
-    t()
-  for (i in 1:dim(p)[1]) {
-    if (coef[i, 1] > 0) {
-      coef[i, 1] <- paste0("  ", coef[i, 1])
-    } else {
-      coef[i, 1] <- paste0(" ", coef[i, 1])
-    }
-    if (p[i, 1] < 0.10 & p[i, 1] >= 0.05) {
-      coef[i, 1] <- paste0("/", coef[i, 1])
-    }
-    if (p[i, 1] < 0.05 & p[i, 1] >= 0.01) {
-      coef[i, 1] <- paste0("*", coef[i, 1])
-    }
-    if (p[i, 1] < 0.01) {
-      coef[i, 1] <- paste0("**", coef[i, 1])
-    }
-    if (coef[i, 2] > 0) {
-      coef[i, 2] <- paste0("  ", coef[i, 2])
-    } else {
-      coef[i, 2] <- paste0(" ", coef[i, 2])
-    }
-    if (p[i, 2] < 0.10 & p[i, 2] >= 0.05) {
-      coef[i, 2] <- paste0("/", coef[i, 2])
-    }
-    if (p[i, 2] < 0.05 & p[i, 2] >= 0.01) {
-      coef[i, 2] <- paste0("*", coef[i, 2])
-    }
-    if (p[i, 2] < 0.01) {
-      coef[i, 2] <- paste0("**", coef[i, 2])
-    }
-  }
-  write.csv(
-    coef,
-    file.path("..", "output", "lr", paste0(target, ".csv")),
-    quote = F
-  )
-type <- c(
-  "ASC",
-  "Age", "Age", "Age",
-  "Gender", "Gender",
-  "DL",
-  "Education", "Education",
-  "Income", "Income", "Income",
-  "Neighborhood", "Neighborhood",
-  "Source", "Source", "Source"
-)
-class <- c(
-  "ASC",
-  "35-49", "50-64", "65+",
-  "Male", "Non-binary",
-  "Yes",
-  "College", "Graduate",
-  "$50K-$99K", "$100K-$149K", "$150K+",
-  "Suburban", "Town/rural",
-  "Longitudinal", "Convenience", "Mail-back", "Mail-online"
-)
-classId <- c(
-  "1",
-  "1", "2", "3",
-  "1", "2",
-  "1",
-  "1", "2",
-  "1", "2", "3",
-  "1", "2",
-  "1", "2", "3", "4"
-)
-
-beta <- stepped %>%
+# Map each surviving coefficient to its plot metadata by coefficient NAME,
+# never by position (AGENTS.md known fragility #2). Stepwise selection drops
+# different terms at different time points, so any positional splice produces
+# correctly formatted, wrong values.
+coef_long <- stepped %>%
   coef() %>%
-  as.data.frame() %>%
-  round(3) %>%
   t() %>%
-  as.data.frame() %>%
-  tibble()
-sigma <- summary(stepped)$standard.errors %>%
-  as.data.frame() %>%
   round(3) %>%
-  t() %>%
   as.data.frame() %>%
-  tibble()
-
-if (target == "precovid") {
-  beta <- rbind(beta[1:4, ], c(NA, NA), c(NA, NA), beta[5:15, ])
-  sigma <- rbind(sigma[1:4, ], c(NA, NA), c(NA, NA), sigma[5:15, ])
-} else if (target == "2021") {
-  beta <- rbind(beta[1:4, ], c(NA, NA), c(NA, NA), c(NA, NA), beta[5:14, ])
-  sigma <- rbind(sigma[1:4, ], c(NA, NA), c(NA, NA), c(NA, NA), sigma[5:14, ])
-} else {
-  beta <- rbind(
-    beta[1:4, ], c(NA, NA), c(NA, NA), c(NA, NA), beta[5:11, ],
-    c(NA, NA), c(NA, NA), c(NA, NA)
+  tibble::rownames_to_column("term") %>%
+  tibble::as_tibble() %>%
+  tidyr::pivot_longer(
+    -term,
+    names_to = "outcome",
+    values_to = "beta"
   )
-  sigma <- rbind(
-    sigma[1:4, ], c(NA, NA), c(NA, NA), c(NA, NA), sigma[5:11, ],
-    c(NA, NA), c(NA, NA), c(NA, NA)
-  )
-}
 
-plot <- beta %>%
-  mutate(
-    type = type,
-    class = class,
-    classId = classId
-  ) %>%
-  gather("key", "value", -"type", -"class", -"classId") %>%
-  mutate(
-    sigma = sigma %>%
-      gather() %>% .[, 2] %>% .$value
-  ) %>%
-  rename(beta = value) %>%
+sigma_long <- summary(stepped)$standard.errors %>%
+  t() %>%
+  round(3) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("term") %>%
+  tibble::as_tibble() %>%
+  tidyr::pivot_longer(
+    -term,
+    names_to = "outcome",
+    values_to = "sigma"
+  )
+
+metadata <- lr_attitudinal_term_metadata(unique(coef_long$term))
+
+plot <- coef_long %>%
+  dplyr::left_join(sigma_long, by = c("term", "outcome")) %>%
+  dplyr::left_join(metadata, by = "term") %>%
   mutate(
     type = factor(
       type,
@@ -278,9 +240,10 @@ plot <- beta %>%
     position = position_dodge(width = 0.5)
   ) +
   scale_size_continuous(range = c(1, 10)) +
-  coord_flip() +
+  # Clip at the panel boundary instead of dropping out-of-range rows:
+  # ylim() would silently remove points outside +/-2.8.
+  coord_flip(ylim = c(-2.8, 2.8)) +
   scale_x_discrete(limits = rev) +
-  ylim(c(-2.8, 2.8)) +
   scale_color_discrete(guide = "none") +
   scale_shape_discrete(guide = "none") +
   labs(
@@ -288,11 +251,11 @@ plot <- beta %>%
     y = "Coefficient"
   ) +
   facet_grid(
-    cols = vars(key)
+    cols = vars(outcome)
   )
 
 ggsave(
-  file.path("..", "output", "lr", paste0("plot_", target, ".png")),
+  phase0_output_path("lr", paste0("plot_", target, ".png")),
   plot,
   width = 9,
   height = 3.3,
@@ -304,28 +267,27 @@ do_lr_remote("2021")
 do_lr_remote("2022")
 
 
-read.csv(file.path("..", "output", "lr", "precovid.csv")) %>%
-  tibble() %>%
-  full_join(
-    read.csv(file.path("..", "output", "lr", "2021.csv")) %>%
-      tibble(),
-    by = "X"
-  ) %>%
-  full_join(
-    read.csv(file.path("..", "output", "lr", "2022.csv")) %>%
-      tibble(),
-    by = "X"
-  ) %>%
-  write.csv(
-    file.path("..", "output", "lr", "remote.csv"),
-    row.names = F,
-    quote = F
-  )
+phase0_write_csv(
+  phase0_model_tidy %>%
+    filter(target %in% c("precovid", "2021", "2022")) %>%
+    arrange(target, outcome, term),
+  phase0_output_path("lr", "remote_models_tidy.csv"),
+  "lr_remote",
+  "Combined tidy multinomial coefficients for all remote-work time points."
+)
 
 lr_data_remote %>%
   select(c06c_work_location_home_precovid, source) %>%
   filter(!is.na(c06c_work_location_home_precovid)) %>%
+  phase0_track(
+    "lr_remote_precovid_home_location_filter_not_missing",
+    "lr_remote_precovid_home_location"
+  ) %>%
   filter(c06c_work_location_home_precovid > -1) %>%
+  phase0_track(
+    "lr_remote_precovid_home_location_filter_missing_code",
+    "lr_remote_precovid_home_location"
+  ) %>%
   group_by_all() %>%
   summarise(
     n = n()
@@ -349,7 +311,15 @@ lr_data_remote %>%
 lr_data_remote %>%
   select(c07c_work_location_home_2021, source) %>%
   filter(!is.na(c07c_work_location_home_2021)) %>%
+  phase0_track(
+    "lr_remote_2021_home_location_filter_not_missing",
+    "lr_remote_2021_home_location"
+  ) %>%
   filter(c07c_work_location_home_2021 > -1) %>%
+  phase0_track(
+    "lr_remote_2021_home_location_filter_missing_code",
+    "lr_remote_2021_home_location"
+  ) %>%
   group_by_all() %>%
   summarise(
     n = n()
@@ -373,7 +343,15 @@ lr_data_remote %>%
 lr_data_remote %>%
   select(c08c_work_location_home_2022, source) %>%
   filter(!is.na(c08c_work_location_home_2022)) %>%
+  phase0_track(
+    "lr_remote_2022_home_location_filter_not_missing",
+    "lr_remote_2022_home_location"
+  ) %>%
   filter(c08c_work_location_home_2022 > -1) %>%
+  phase0_track(
+    "lr_remote_2022_home_location_filter_missing_code",
+    "lr_remote_2022_home_location"
+  ) %>%
   group_by_all() %>%
   summarise(
     n = n()

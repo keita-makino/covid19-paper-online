@@ -1,10 +1,23 @@
 test_socio <- function(target, title) {
   data <- al %>%
+    filter(!is.na(.data[[target]])) %>%
+    phase0_track(
+      paste0("stat_", target, "_filter_not_missing"),
+      paste0("stat_", target)
+    ) %>%
+    filter(.data[[target]] != -99999) %>%
+    phase0_track(
+      paste0("stat_", target, "_filter_missing_code"),
+      paste0("stat_", target)
+    ) %>%
     factorize_socio() %>%
-    select(target, source) %>%
-    rename(value = target) %>%
+    select(all_of(c(target, "source"))) %>%
+    rename(value = all_of(target)) %>%
     filter(!is.na(value)) %>%
-    filter(value != -99999) %>%
+    phase0_track(
+      paste0("stat_", target, "_filter_invalid_transformed"),
+      paste0("stat_", target)
+    ) %>%
     mutate(
       value = value %>% as_factor(),
       source = source %>%
@@ -12,15 +25,29 @@ test_socio <- function(target, title) {
     ) %>%
     group_by(value, source)
 
-  data %>%
+  count_data <- data %>%
     count() %>%
     group_by(source) %>%
-    mutate(n = n / sum(n)) %>%
+    mutate(relative_frequency = n / sum(n)) %>%
+    ungroup() %>%
+    mutate(
+      variable = target,
+      variable_label = title
+    )
+
+  phase0_write_csv(
+    count_data,
+    phase0_output_path("test", paste0(target, "_distribution.csv")),
+    "stat",
+    "Sociodemographic distribution counts and relative frequencies by recruitment channel."
+  )
+
+  plot <- count_data %>%
     ggplot() +
     geom_bar(
       aes(
         x = value,
-        y = n,
+        y = relative_frequency,
         fill = source
       ),
       stat = "identity",
@@ -91,8 +118,12 @@ test_socio <- function(target, title) {
     xlab(
       title
     )
+
+  output_path <- phase0_output_path("test", paste0(target, ".png"))
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
   ggsave(
-    paste0("../output/test/", target, ".png"),
+    output_path,
+    plot = plot,
     width = 6,
     height = 3.6,
     units = "in"

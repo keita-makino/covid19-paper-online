@@ -6,10 +6,13 @@ get_attitudinal <- function(name) {
   return(
     data %>%
       select(
-        attitudinal_tag_list_long[1:27], source
+        all_of(attitudinal_analysis_tag_list_long), source
       ) %>%
+      phase0_track("attitudinal_select_items", name) %>%
       filter(if_all(starts_with("a"), ~ !is.na(.))) %>%
+      phase0_track("attitudinal_filter_missing", name) %>%
       filter(if_all(starts_with("a"), ~ . > 0)) %>%
+      phase0_track("attitudinal_filter_nonpositive", name) %>%
       mutate_at(vars(
         "a1o_rightofway_cars",
         "a1p_prefer_being_driver",
@@ -24,7 +27,8 @@ get_attitudinal <- function(name) {
           . == 7 ~ 4,
           . == 8 ~ 5
         )
-      })
+      }) %>%
+      phase0_track("attitudinal_recode_response_scales", name)
   )
 }
 

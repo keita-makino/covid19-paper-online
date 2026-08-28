@@ -1,2 +1,2 @@
-read_sav("./data/cs.sav") %>%
-  write.csv("../output/cs.csv")
+read_sav(file.path("src", "data", "cs.sav")) %>%
+  write.csv(phase0_output_path("cs.csv"))

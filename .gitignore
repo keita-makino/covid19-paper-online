@@ -5,6 +5,7 @@ renv/library
 renv/local
 renv/cellar
 AGENTS.md
+.env
 
 /output/
 src/test_code
