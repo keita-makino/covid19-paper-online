@@ -58,7 +58,8 @@ mm <- read_sav(Sys.getenv("DATA_MM_PATH")) %>%
         a1t_reschedule_avoid_congestion == a1z_stretch_budget_for_new_things &
         a1t_reschedule_avoid_congestion == a1aa_increase_cost_pt &
         a1t_reschedule_avoid_congestion == a1ab_protected_bike &
-        a1t_reschedule_avoid_congestion == a1ac_costly_parking ~ 1,
+        a1t_reschedule_avoid_congestion == a1ac_costly_parking &
+        a1t_reschedule_avoid_congestion == a1ad_satisfied_life ~ 1,
       T ~ 0
     )
   ) %>%
@@ -131,7 +132,8 @@ re <- readRDS(Sys.getenv("DATA_2021_PATH")) %>%
         a1t_reschedule_avoid_congestion == a1z_stretch_budget_for_new_things &
         a1t_reschedule_avoid_congestion == a1aa_increase_cost_pt &
         a1t_reschedule_avoid_congestion == a1ab_protected_bike &
-        a1t_reschedule_avoid_congestion == a1ac_costly_parking ~ 1,
+        a1t_reschedule_avoid_congestion == a1ac_costly_parking &
+        a1t_reschedule_avoid_congestion == a1ad_satisfied_life ~ 1,
       T ~ 0
     ),
   ) %>%

@@ -27,8 +27,8 @@ attitudinal_tag_list <- c(
   "A06_1",
   "A06_2",
   "A06_3",
-  "A06_4"
-  # "A06_5", # a1ad_satisfied_life; excluded as not transportation-related.
+  "A06_4",
+  "A06_5"
   # "C11_1",
   # "C11_2",
   # "C11_3",
@@ -92,8 +92,8 @@ attitudinal_tag_list_long <- c(
   "a1z_stretch_budget_for_new_things",
   "a1aa_increase_cost_pt",
   "a1ab_protected_bike",
-  "a1ac_costly_parking"
-  # "a1ad_satisfied_life", # Excluded as not transportation-related.
+  "a1ac_costly_parking",
+  "a1ad_satisfied_life"
   # "C11_1",
   # "C11_2",
   # "C11_3",
@@ -136,8 +136,16 @@ attitudinal_quality_filter_tag_list_long <- c(
 
 # This exclusion is applied before the EFA loading-threshold loop.
 attitudinal_conceptual_exclusions <- tibble::tibble(
-  item = "a1ad_satisfied_life",
-  reason = "not_transportation_related"
+  item = c(
+    "a1ad_satisfied_life",
+    "a1y_pay_quickier_trip",
+    "a1u_satified_transpo"
+  ),
+  reason = c(
+    "not_transportation_related",
+    "supervisor_comment_4_conceptual_consistency",
+    "supervisor_comment_4_conceptual_consistency"
+  )
 )
 
 attitudinal_analysis_tag_list_long <- setdiff(
@@ -149,7 +157,13 @@ attitudinal_analysis_tag_list_long <- setdiff(
 )
 
 stopifnot(
-  length(attitudinal_analysis_tag_list_long) == 27L,
+  length(attitudinal_tag_list) == length(attitudinal_tag_list_long),
+  "a1ad_satisfied_life" %in% attitudinal_tag_list_long,
+  length(attitudinal_analysis_tag_list_long) == 25L,
+  all(c(
+    "a1y_pay_quickier_trip",
+    "a1u_satified_transpo"
+  ) %in% attitudinal_conceptual_exclusions$item),
   !any(attitudinal_conceptual_exclusions$item %in% attitudinal_analysis_tag_list_long)
 )
 
@@ -182,8 +196,8 @@ attitudinal_text_list <- c(
   "I'll stretch my budget to buy something new and exciting.",
   "We should raise the price of driving to provide funding for better public transportation.",
   "If I felt protected from car traffic, I would ride a bicycle more often.",
-  "I am less likely to drive if parking is difficult or expensive."
-  # Excluded conceptually before analysis: "I am generally satisfied with my life.",
+  "I am less likely to drive if parking is difficult or expensive.",
+  "I am generally satisfied with my life."
   # "I perform better when I interact with colleagues in person.",
   # "I am concerned about the health impacts of the COVID-19 pandemic in my country.",
   # "Working from home makes me less disciplined/self-controlled.",

@@ -1,5 +1,5 @@
 phase0_seed <- 20260727
-phase0_attitudinal_scenario <- "A_current"
+phase0_attitudinal_scenario <- "S2_conceptual_exclusions"
 set.seed(phase0_seed)
 
 if (!exists("phase0_project_root", envir = .GlobalEnv, inherits = FALSE)) {
@@ -312,7 +312,7 @@ phase0_stage_map <- tibble::tribble(
   "mail-back only",
   "2", "data_import_mm_filter_attitudinal_complete", "mm",
   "Mail-back attitudinal completeness filter, including attention checks",
-  "mail-back only; attention checks are excluded from the 27-item analysis set",
+  "mail-back only; attention checks and conceptual exclusions are excluded from the 25-item analysis set",
   "3", "data_import_mm_filter_flat_line", "mm",
   "Straight-line screen",
   "mail-back and online",
