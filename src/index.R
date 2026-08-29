@@ -66,6 +66,6 @@ source("./src/preparation/lr_data_create.R")
 source("./src/analysis/04_lr_attitudinal.R")
 source("./src/analysis/05_lr_remote.R")
 
-source("./src/analysis/90_attitudinal_distribution.R")
+# source("./src/analysis/90_attitudinal_distribution.R")
 
 phase0_finalize()

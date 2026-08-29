@@ -4,6 +4,23 @@
 mm <- read_sav(Sys.getenv("DATA_MM_PATH")) %>%
   select(all_of(tag_list), gc) %>%
   rename_with(~tag_list_long, all_of(tag_list)) %>%
+  mutate_at(
+    vars(
+      "a1o_rightofway_cars",
+      "a1p_prefer_being_driver",
+      "a1q_no_alternative_to_driving",
+      "a1r_like_idea_pt_as_transportation",
+      "a1s_like_latest_technology"
+    ),
+    ~ {
+      case_when(
+        . == 6 ~ 3,
+        . == 7 ~ 4,
+        . == 8 ~ 5,
+        TRUE ~ as.numeric(.)
+      )
+    }
+  ) %>%
   mutate(source = "mail_mail") %>%
   phase0_track("data_import_mm_raw", "mm") %>%
   filter(gc == 1) %>%
